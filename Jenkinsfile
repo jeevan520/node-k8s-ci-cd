@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'node18'   // 👈 THIS FIXES npm not found
+    }
+
     environment {
         DOCKER_IMAGE = "node-k8s-ci-cd/node-k8s"
         KUBECONFIG = "${HOME}/.kube/config"
@@ -17,16 +21,20 @@ pipeline {
 
         stage("Install Dependencies") {
             steps {
-                sh 'npm install'
+                sh '''
+                  node -v
+                  npm -v
+                  npm install
+                '''
             }
         }
 
         stage("Build Docker Image") {
             steps {
-                sh """
-                docker build -t $DOCKER_IMAGE:$BUILD_NUMBER .
-                docker tag $DOCKER_IMAGE:$BUILD_NUMBER $DOCKER_IMAGE:latest
-                """
+                sh '''
+                  docker build -t $DOCKER_IMAGE:$BUILD_NUMBER .
+                  docker tag $DOCKER_IMAGE:$BUILD_NUMBER $DOCKER_IMAGE:latest
+                '''
             }
         }
 
@@ -36,41 +44,41 @@ pipeline {
                     credentialsId: 'dockerhub-creds',
                     url: 'https://index.docker.io/v1/'
                 ) {
-                    sh """
-                    docker push $DOCKER_IMAGE:$BUILD_NUMBER
-                    docker push $DOCKER_IMAGE:latest
-                    """
+                    sh '''
+                      docker push $DOCKER_IMAGE:$BUILD_NUMBER
+                      docker push $DOCKER_IMAGE:latest
+                    '''
                 }
             }
         }
 
         stage("Deploy to Kubernetes") {
             steps {
-                sh """
-                kubectl apply -f k8s/
-                kubectl set image deployment/node-app \
-                  node-app=$DOCKER_IMAGE:$BUILD_NUMBER
-                """
+                sh '''
+                  kubectl apply -f k8s/
+                  kubectl set image deployment/node-app \
+                    node-app=$DOCKER_IMAGE:$BUILD_NUMBER
+                '''
             }
         }
 
         stage("Verify Deployment") {
             steps {
-                sh """
-                kubectl rollout status deployment/node-app
-                kubectl get pods
-                kubectl get svc
-                """
+                sh '''
+                  kubectl rollout status deployment/node-app
+                  kubectl get pods
+                  kubectl get svc
+                '''
             }
         }
     }
 
     post {
         success {
-            echo "✅ Deployment successful!"
+            echo "✅ CI/CD Pipeline completed successfully"
         }
         failure {
-            echo "❌ Deployment failed!"
+            echo "❌ CI/CD Pipeline failed"
         }
     }
 }
