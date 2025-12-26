@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        nodejs 'node18'   // 👈 THIS FIXES npm not found
-    }
-
     environment {
         DOCKER_IMAGE = "node-k8s-ci-cd/node-k8s"
         KUBECONFIG = "${HOME}/.kube/config"
@@ -16,16 +12,6 @@ pipeline {
             steps {
                 git branch: 'main',
                     url: 'https://github.com/jeevan520/node-k8s-ci-cd.git'
-            }
-        }
-
-        stage("Install Dependencies") {
-            steps {
-                sh '''
-                  node -v
-                  npm -v
-                  npm install
-                '''
             }
         }
 
@@ -75,10 +61,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ CI/CD Pipeline completed successfully"
+            echo "✅ CI/CD pipeline completed successfully"
         }
         failure {
-            echo "❌ CI/CD Pipeline failed"
+            echo "❌ CI/CD pipeline failed"
         }
     }
 }
